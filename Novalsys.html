@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Novalsys-project</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="Novalsys.css">
+    <script>
+        //========================config===========================
+        const nbRandomMarkers = 5;
+        const maxRandomDistance = 2.0;
+        const mainPlaceQuery = 'Empire state building';
+        //=========================================================
+
+        let map;
+        let placesService;
+        let mainCoord;
+
+        /**
+         * create the map, initiate the placesService
+         */
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 0, lng: 0},
+                zoom: 14
+            });
+            placesService = new google.maps.places.PlacesService(map);
+
+            putMainMarker(mainPlaceQuery, putRandomMarkers.bind(null, nbRandomMarkers, maxRandomDistance));
+        }
+
+        /**
+         * Put quantity of markers randomly around the main place.
+         *
+         * @param {int} quantity
+         * @param {number} maxDistance
+         */
+        function putRandomMarkers(quantity, maxDistance) {
+            for (let i = 0; i < quantity; i++) {
+                createMarker(getRandomPosition(mainCoord, maxDistance), (i % 5).toString());
+            }
+        }
+
+        /**
+         * Add a marker without icon at the place of the query.
+         *
+         * @param {function} callBack
+         * @param {String} query
+         */
+        function putMainMarker(query, callBack) {
+            placesService.textSearch({
+                query: query
+            }, function (results, status) {
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    mainCoord = results[0].geometry.location;
+                    createMarker(mainCoord, null);
+                    map.setCenter(mainCoord);
+                    callBack();
+                }
+            });
+        }
+
+        /**
+         * Return a object with lat and lng calulated according an origin point and a max distance from this point.
+         *
+         * @param {Object} origin
+         * @param {number} maxDistance
+         * @return {Object} return a LatLngObject
+         */
+        function getRandomPosition(origin, maxDistance) {
+            const R = 6378;
+            let angle = Math.random() * 2 * Math.PI;
+            let distance = Math.random() * maxDistance;
+
+            let diffLat = (Math.sin(angle) * distance) / R;
+
+            let diffLong = Math.sqrt((Math.pow(distance, 2) - Math.pow(R, 2) * Math.pow(diffLat, 2))
+                / (Math.pow(Math.cos(convertRad(origin.lat())), 2) * Math.pow(R, 2)));
+
+            if (angle > Math.PI / 2 && angle < Math.PI * 3 / 2) {
+                diffLong *= -1;
+            }
+            return {lat: origin.lat() + convertDeg(diffLat), lng: origin.lng() + convertDeg(diffLong)};
+        }
+
+        /**
+         * If null imageName given, default google marker used as icon.
+         *
+         * @param {Object} coord
+         * @param {String} imageName
+         */
+        function createMarker(coord, imageName) {
+            let icon = null;
+            if (imageName) {
+                icon = {
+                    url: imageName + '.png',
+                    scaledSize: new google.maps.Size(30, 40),
+                    anchor: new google.maps.Point(15, 40)
+                };
+            }
+
+            new google.maps.Marker({
+                map: map,
+                icon: icon,
+                position: coord
+            });
+        }
+
+
+        //======================Math utils============================
+
+        /**
+         * @param {number} value in radian
+         * @return {number} converted value in degree
+         */
+        function convertDeg(value) {
+            return (value * 180) / Math.PI;
+        }
+
+        /**
+         * @param {number} value in degree
+         * @return {number} converted value in radian
+         */
+        function convertRad(value) {
+            return (value * Math.PI) / 180;
+        }
+    </script>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmyLlPhuAS_pdtHNQtoNJ3AzTTX6cZDLU&libraries=places&callback=initMap"
+        async defer></script>
+</body>
+</html>
